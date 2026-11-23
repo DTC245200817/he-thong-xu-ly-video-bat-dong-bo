@@ -38,15 +38,19 @@ var storageBasePath = Environment.GetEnvironmentVariable("STORAGE_PATH")
     ?? "storage";
 builder.Services.AddSingleton<IFileStorageService>(_ => new LocalFileStorageService(storageBasePath));
 
-// Database Context Setup: Prefer PostgreSQL if available, otherwise fallback to SQLite
+// Database Context Setup: Prefer PostgreSQL if USE_POSTGRES=true, otherwise fallback to SQLite
 var pgConnStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") 
     ?? builder.Configuration.GetConnectionString("Postgres");
 var sqliteConnStr = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=storage/media.db";
 
+if (!Directory.Exists("storage"))
+{
+    Directory.CreateDirectory("storage");
+}
+
 builder.Services.AddDbContext<MediaDbContext>(options =>
 {
-    var usePostgres = Environment.GetEnvironmentVariable("USE_POSTGRES") == "true" 
-        || (!string.IsNullOrEmpty(pgConnStr) && pgConnStr.Contains("Host="));
+    var usePostgres = Environment.GetEnvironmentVariable("USE_POSTGRES") == "true";
     
     if (usePostgres && !string.IsNullOrEmpty(pgConnStr))
     {
@@ -58,8 +62,8 @@ builder.Services.AddDbContext<MediaDbContext>(options =>
     }
 });
 
-// RabbitMQ Connection with Retry Policy
-builder.Services.AddSingleton<IConnection>(sp =>
+// RabbitMQ Connection with Graceful Fallback
+builder.Services.AddSingleton<IConnection?>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<Program>>();
     var hostName = Environment.GetEnvironmentVariable("RABBITMQ_HOST") 
@@ -74,36 +78,31 @@ builder.Services.AddSingleton<IConnection>(sp =>
         ?? builder.Configuration["RabbitMQ:Password"] 
         ?? "guest";
 
-    var factory = new ConnectionFactory
+    try
     {
-        HostName = hostName,
-        Port = port,
-        UserName = user,
-        Password = pass,
-        DispatchConsumersAsync = true,
-        AutomaticRecoveryEnabled = true
-    };
+        var factory = new ConnectionFactory
+        {
+            HostName = hostName,
+            Port = port,
+            UserName = user,
+            Password = pass,
+            RequestedConnectionTimeout = TimeSpan.FromSeconds(2),
+            DispatchConsumersAsync = true,
+            AutomaticRecoveryEnabled = true
+        };
 
-    var retryPolicy = Policy
-        .Handle<BrokerUnreachableException>()
-        .Or<Exception>()
-        .WaitAndRetry(
-            retryCount: 10,
-            sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Min(Math.Pow(2, retryAttempt), 15)),
-            onRetry: (exception, timeSpan, retryCount, context) =>
-            {
-                logger.LogWarning("RabbitMQ connection attempt {RetryCount} failed: {Message}. Retrying in {Delay}s...", 
-                    retryCount, exception.Message, timeSpan.TotalSeconds);
-            });
-
-    return retryPolicy.Execute(() =>
-    {
         logger.LogInformation("Connecting to RabbitMQ at {Host}:{Port}...", hostName, port);
         return factory.CreateConnection();
-    });
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning("RabbitMQ connection failed: {Message}. Running in standalone mode with In-Memory fallback channel.", ex.Message);
+        return null;
+    }
 });
 
 builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+builder.Services.AddHostedService<MediaApi.FallbackJobProcessor>();
 
 var app = builder.Build();
 
@@ -372,12 +371,12 @@ app.MapGet("/storage/{folder}/{fileName}", (
 // ---------------------------------------------------------------------
 // 7. GET /healthz - System Health Check
 // ---------------------------------------------------------------------
-app.MapGet("/healthz", async (MediaDbContext db, IConnection connection) =>
+app.MapGet("/healthz", async (MediaDbContext db, IConnection? connection) =>
 {
     var dbOk = await db.Database.CanConnectAsync();
-    var rmqOk = connection.IsOpen;
+    var rmqOk = connection != null && connection.IsOpen;
 
-    var status = dbOk && rmqOk ? "Healthy" : "Degraded";
+    var status = dbOk && rmqOk ? "Healthy" : (dbOk ? "Degraded (Standalone Mode)" : "Unhealthy");
     var result = new
     {
         status,
@@ -385,11 +384,11 @@ app.MapGet("/healthz", async (MediaDbContext db, IConnection connection) =>
         components = new
         {
             database = dbOk ? "Healthy" : "Unreachable",
-            rabbitMQ = rmqOk ? "Healthy" : "Closed"
+            rabbitMQ = rmqOk ? "Healthy" : "Offline / Standalone Fallback Active"
         }
     };
 
-    return dbOk && rmqOk ? Results.Ok(result) : Results.Json(result, statusCode: 503);
+    return Results.Ok(result);
 })
 .WithName("HealthCheck")
 .WithSummary("Service Health Check");

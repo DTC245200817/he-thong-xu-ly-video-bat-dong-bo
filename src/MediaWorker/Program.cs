@@ -21,8 +21,7 @@ var sqliteConnStr = builder.Configuration.GetConnectionString("Sqlite") ?? "Data
 
 builder.Services.AddDbContext<MediaDbContext>(options =>
 {
-    var usePostgres = Environment.GetEnvironmentVariable("USE_POSTGRES") == "true" 
-        || (!string.IsNullOrEmpty(pgConnStr) && pgConnStr.Contains("Host="));
+    var usePostgres = Environment.GetEnvironmentVariable("USE_POSTGRES") == "true";
     
     if (usePostgres && !string.IsNullOrEmpty(pgConnStr))
     {
