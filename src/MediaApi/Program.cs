@@ -33,20 +33,13 @@ builder.Services.AddCors(options =>
 });
 
 // File Storage Service
-var storageBasePath = Environment.GetEnvironmentVariable("STORAGE_PATH") 
-    ?? builder.Configuration["Storage:BasePath"] 
-    ?? "storage";
+var storageBasePath = StoragePaths.ResolveRootStorage();
 builder.Services.AddSingleton<IFileStorageService>(_ => new LocalFileStorageService(storageBasePath));
 
 // Database Context Setup: Prefer PostgreSQL if USE_POSTGRES=true, otherwise fallback to SQLite
 var pgConnStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") 
     ?? builder.Configuration.GetConnectionString("Postgres");
-var sqliteConnStr = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=storage/media.db";
-
-if (!Directory.Exists("storage"))
-{
-    Directory.CreateDirectory("storage");
-}
+var sqliteConnStr = $"Data Source={Path.Combine(storageBasePath, "media.db")}";
 
 builder.Services.AddDbContext<MediaDbContext>(options =>
 {

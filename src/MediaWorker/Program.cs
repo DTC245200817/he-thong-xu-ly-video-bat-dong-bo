@@ -8,16 +8,14 @@ using RabbitMQ.Client.Exceptions;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// File Storage Service
-var storageBasePath = Environment.GetEnvironmentVariable("STORAGE_PATH") 
-    ?? builder.Configuration["Storage:BasePath"] 
-    ?? "storage";
+// Storage and Database path resolution
+var storageBasePath = StoragePaths.ResolveRootStorage();
 builder.Services.AddSingleton<IFileStorageService>(_ => new LocalFileStorageService(storageBasePath));
 
 // Database Context Setup
 var pgConnStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") 
     ?? builder.Configuration.GetConnectionString("Postgres");
-var sqliteConnStr = builder.Configuration.GetConnectionString("Sqlite") ?? "Data Source=storage/media.db";
+var sqliteConnStr = $"Data Source={Path.Combine(storageBasePath, "media.db")}";
 
 builder.Services.AddDbContext<MediaDbContext>(options =>
 {
