@@ -1,0 +1,110 @@
+services:
+  # -------------------------------------------------------------
+  # 1. Message Broker: RabbitMQ with Management UI & DLQ Support
+  # -------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: media-rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"     # AMQP Protocol
+      - "15672:15672"   # Management Web UI (guest / guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - media-network
+
+  # -------------------------------------------------------------
+  # 2. Database: PostgreSQL for Videos and Jobs state persistence
+  # -------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: media-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: mediadb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mediadb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - media-network
+
+  # -------------------------------------------------------------
+  # 3. Media API: ASP.NET Core Minimal API with Swagger & Web UI
+  # -------------------------------------------------------------
+  media-api:
+    build:
+      context: .
+      dockerfile: src/MediaApi/Dockerfile
+    container_name: media-api
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Production
+      - USE_POSTGRES=true
+      - POSTGRES_CONNECTION_STRING=Host=postgres;Port=5432;Database=mediadb;Username=postgres;Password=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASS=guest
+      - STORAGE_PATH=/app/storage
+    volumes:
+      - media-storage:/app/storage
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - media-network
+
+  # -------------------------------------------------------------
+  # 4. Media Worker: Background processing service consuming RabbitMQ
+  # -------------------------------------------------------------
+  media-worker:
+    build:
+      context: .
+      dockerfile: src/MediaWorker/Dockerfile
+    container_name: media-worker
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - USE_POSTGRES=true
+      - POSTGRES_CONNECTION_STRING=Host=postgres;Port=5432;Database=mediadb;Username=postgres;Password=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASS=guest
+      - STORAGE_PATH=/app/storage
+    volumes:
+      - media-storage:/app/storage
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      media-api:
+        condition: service_started
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  media-storage:
