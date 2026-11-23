@@ -1,0 +1,23 @@
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Storage
+storage/
+media-storage/
+
+# Logs
+*.log
+logs/
+.system_generated/
