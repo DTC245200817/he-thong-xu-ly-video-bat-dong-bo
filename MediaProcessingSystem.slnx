@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MediaApi/MediaApi.csproj" />
+    <Project Path="src/MediaClient.Console/MediaClient.Console.csproj" />
+    <Project Path="src/MediaProcessing.Shared/MediaProcessing.Shared.csproj" />
+    <Project Path="src/MediaWorker/MediaWorker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MediaProcessing.Tests/MediaProcessing.Tests.csproj" />
+  </Folder>
+</Solution>
