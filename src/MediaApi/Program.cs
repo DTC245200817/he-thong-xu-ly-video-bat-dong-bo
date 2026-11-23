@@ -62,10 +62,11 @@ builder.Services.AddDbContext<MediaDbContext>(options =>
     }
 });
 
-// RabbitMQ Connection with Graceful Fallback
-builder.Services.AddSingleton<IConnection?>(sp =>
+// RabbitMQ Publisher with Graceful Fallback
+builder.Services.AddSingleton<IRabbitMqPublisher>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<Program>>();
+    var publisherLogger = sp.GetRequiredService<ILogger<RabbitMqPublisher>>();
     var hostName = Environment.GetEnvironmentVariable("RABBITMQ_HOST") 
         ?? builder.Configuration["RabbitMQ:HostName"] 
         ?? "localhost";
@@ -78,6 +79,7 @@ builder.Services.AddSingleton<IConnection?>(sp =>
         ?? builder.Configuration["RabbitMQ:Password"] 
         ?? "guest";
 
+    IConnection? connection = null;
     try
     {
         var factory = new ConnectionFactory
@@ -92,16 +94,16 @@ builder.Services.AddSingleton<IConnection?>(sp =>
         };
 
         logger.LogInformation("Connecting to RabbitMQ at {Host}:{Port}...", hostName, port);
-        return factory.CreateConnection();
+        connection = factory.CreateConnection();
     }
     catch (Exception ex)
     {
         logger.LogWarning("RabbitMQ connection failed: {Message}. Running in standalone mode with In-Memory fallback channel.", ex.Message);
-        return null;
     }
+
+    return new RabbitMqPublisher(connection, publisherLogger);
 });
 
-builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 builder.Services.AddHostedService<MediaApi.FallbackJobProcessor>();
 
 var app = builder.Build();
@@ -316,6 +318,88 @@ app.MapGet("/videos/{id}", async (
 .WithSummary("Get details of a specific video by ID");
 
 // ---------------------------------------------------------------------
+// 4b. POST /videos/{id}/process-all - Batch create standard jobs
+// ---------------------------------------------------------------------
+app.MapPost("/videos/{id}/process-all", async (
+    Guid id,
+    HttpRequest request,
+    MediaDbContext db,
+    IRabbitMqPublisher publisher,
+    ILogger<Program> logger) =>
+{
+    var correlationId = (string)request.HttpContext.Items["CorrelationId"]!;
+    var video = await db.Videos.Include(v => v.Jobs).FirstOrDefaultAsync(v => v.Id == id);
+    if (video == null)
+    {
+        return Results.NotFound(new { error = $"Video with ID '{id}' was not found." });
+    }
+
+    var jobTypes = new[] { JobType.ExtractMetadata, JobType.GenerateThumbnail, JobType.Transcode720p };
+    var createdJobs = new List<JobResponse>();
+
+    foreach (var jobType in jobTypes)
+    {
+        var job = new VideoJob
+        {
+            Id = Guid.NewGuid(),
+            VideoId = video.Id,
+            JobType = jobType,
+            Status = JobStatus.Pending,
+            Progress = 0,
+            CorrelationId = correlationId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.VideoJobs.Add(job);
+        await db.SaveChangesAsync();
+
+        await publisher.PublishJobAsync(new VideoJobMessage
+        {
+            JobId = job.Id,
+            VideoId = video.Id,
+            JobType = job.JobType,
+            FilePath = video.StoragePath,
+            CorrelationId = correlationId,
+            Timestamp = DateTime.UtcNow
+        });
+
+        createdJobs.Add(ToJobResponse(job));
+    }
+
+    video.Status = VideoStatus.Processing;
+    video.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+
+    logger.LogInformation("[{CorrelationId}] Batch created 3 jobs for Video: {VideoId}", correlationId, video.Id);
+    return Results.Accepted($"/videos/{video.Id}", new { message = "Batch processing jobs created", jobs = createdJobs });
+})
+.WithName("ProcessAllJobs")
+.WithSummary("Batch dispatch all standard jobs (Metadata, Thumbnail, 720p)");
+
+// ---------------------------------------------------------------------
+// 4c. DELETE /videos/{id} - Delete video and all related jobs
+// ---------------------------------------------------------------------
+app.MapDelete("/videos/{id}", async (
+    Guid id,
+    MediaDbContext db,
+    ILogger<Program> logger) =>
+{
+    var video = await db.Videos.Include(v => v.Jobs).FirstOrDefaultAsync(v => v.Id == id);
+    if (video == null)
+    {
+        return Results.NotFound(new { error = $"Video with ID '{id}' was not found." });
+    }
+
+    db.Videos.Remove(video);
+    await db.SaveChangesAsync();
+
+    logger.LogInformation("Deleted video with ID {VideoId} and related jobs", id);
+    return Results.Ok(new { message = $"Video '{video.Title}' and all associated jobs deleted successfully." });
+})
+.WithName("DeleteVideo")
+.WithSummary("Delete a video and its processing jobs");
+
+// ---------------------------------------------------------------------
 // 5. GET /jobs/{id} - Get a job by ID
 // ---------------------------------------------------------------------
 app.MapGet("/jobs/{id}", async (
@@ -369,12 +453,37 @@ app.MapGet("/storage/{folder}/{fileName}", (
 .WithSummary("Download or stream a stored file (video, thumbnail, etc.)");
 
 // ---------------------------------------------------------------------
-// 7. GET /healthz - System Health Check
+// 7. GET /stats - System metrics and stats
 // ---------------------------------------------------------------------
-app.MapGet("/healthz", async (MediaDbContext db, IConnection? connection) =>
+app.MapGet("/stats", async (MediaDbContext db, IRabbitMqPublisher publisher) =>
+{
+    var totalVideos = await db.Videos.CountAsync();
+    var pendingJobs = await db.VideoJobs.CountAsync(j => j.Status == JobStatus.Pending);
+    var processingJobs = await db.VideoJobs.CountAsync(j => j.Status == JobStatus.Processing);
+    var completedJobs = await db.VideoJobs.CountAsync(j => j.Status == JobStatus.Completed);
+    var failedJobs = await db.VideoJobs.CountAsync(j => j.Status == JobStatus.Failed);
+
+    return Results.Ok(new
+    {
+        totalVideos,
+        pendingJobs,
+        processingJobs,
+        completedJobs,
+        failedJobs,
+        brokerConnected = publisher.IsConnected,
+        brokerMode = publisher.IsConnected ? "RabbitMQ Distributed" : "Standalone In-Memory Fallback"
+    });
+})
+.WithName("GetSystemStats")
+.WithSummary("Get system stats and queue counts");
+
+// ---------------------------------------------------------------------
+// 8. GET /healthz - System Health Check
+// ---------------------------------------------------------------------
+app.MapGet("/healthz", async (MediaDbContext db, IRabbitMqPublisher publisher) =>
 {
     var dbOk = await db.Database.CanConnectAsync();
-    var rmqOk = connection != null && connection.IsOpen;
+    var rmqOk = publisher.IsConnected;
 
     var status = dbOk && rmqOk ? "Healthy" : (dbOk ? "Degraded (Standalone Mode)" : "Unhealthy");
     var result = new

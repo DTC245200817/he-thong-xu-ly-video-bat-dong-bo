@@ -4,108 +4,268 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ Thống Xử Lý Video Bất Đồng Bộ - Distributed Media System</title>
+    <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            --card-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #eef2ff;
+            --secondary: #0ea5e9;
+            --dark: #0f172a;
+            --card-border: rgba(226, 232, 240, 0.8);
+            --bg-page: #f8fafc;
         }
+
         body {
-            background-color: #f8fafc;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-page);
             color: #334155;
+            min-height: 100vh;
         }
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: -0.5px;
+
+        /* Glassmorphism Navbar */
+        .navbar-custom {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         }
-        .hero-banner {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 2.5rem 0;
-            border-bottom: 4px solid #38bdf8;
-            margin-bottom: 2rem;
+
+        .stat-card {
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
         }
-        .card {
-            border: none;
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
             border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
         }
-        .card:hover {
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+
+        .video-card {
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            background: #ffffff;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
         }
-        .badge-status {
-            font-size: 0.8rem;
-            padding: 0.35em 0.75em;
-            border-radius: 50rem;
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
         }
-        .thumbnail-img {
+
+        .thumb-wrapper {
+            position: relative;
+            height: 190px;
+            background-color: #0f172a;
+            overflow: hidden;
+        }
+        .thumb-img {
             width: 100%;
-            height: 180px;
+            height: 100%;
             object-fit: cover;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-            background-color: #1e293b;
+            transition: transform 0.4s ease;
         }
-        .progress-thin {
-            height: 8px;
-            border-radius: 4px;
+        .video-card:hover .thumb-img {
+            transform: scale(1.05);
         }
-        .pulse-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
+
+        .play-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+        }
+        .thumb-wrapper:hover .play-overlay {
+            opacity: 1;
+        }
+        .btn-play-circle {
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            background-color: #22c55e;
-            box-shadow: 0 0 0 rgba(34, 197, 94, 0.4);
-            animation: pulse 1.5s infinite;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        .btn-play-circle:hover {
+            transform: scale(1.1);
+            background: #ffffff;
+        }
+
+        .progress-thin {
+            height: 6px;
+            border-radius: 6px;
+            background-color: #e2e8f0;
+        }
+
+        .pulse-online {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background-color: #10b981;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+            animation: pulseAnim 1.8s infinite;
+        }
+        @keyframes pulseAnim {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .badge-soft-primary { background-color: #e0e7ff; color: #4338ca; }
+        .badge-soft-success { background-color: #d1fae5; color: #065f46; }
+        .badge-soft-warning { background-color: #fef3c7; color: #92400e; }
+        .badge-soft-danger { background-color: #fee2e2; color: #991b1b; }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+            color: #ffffff;
+            border: none;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .btn-gradient:hover {
+            color: #ffffff;
+            opacity: 0.95;
+            transform: translateY(-1px);
         }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <header class="hero-banner">
+    <!-- Header Navbar -->
+    <nav class="navbar navbar-custom navbar-dark py-3 sticky-top">
         <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/">
+                <i class="bi bi-camera-reels text-warning fs-4"></i>
                 <div>
-                    <h1 class="h3 fw-bold mb-1"><i class="bi bi-film me-2"></i>Hệ Thống Xử Lý Video Bất Đồng Bộ</h1>
-                    <p class="mb-0 text-white-50">Đề tài 14 - Phát triển ứng dụng phân tán (.NET 10 Minimal API & RabbitMQ)</p>
+                    <span class="fs-5 text-white">MediaHub</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-2" style="font-size: 0.65rem;">Đề tài 14</span>
+                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">Hệ thống xử lý video bất đồng bộ qua RabbitMQ & .NET 10</div>
                 </div>
-                <div>
-                    <a href="/swagger" target="_blank" class="btn btn-outline-light me-2"><i class="bi bi-code-slash me-1"></i>Swagger API</a>
-                    <a href="http://localhost:15672" target="_blank" class="btn btn-light"><i class="bi bi-box me-1"></i>RabbitMQ UI</a>
+            </a>
+            
+            <div class="d-flex align-items-center gap-2">
+                <div class="d-none d-md-flex align-items-center gap-2 px-3 py-1 bg-dark bg-opacity-50 border border-secondary border-opacity-25 rounded-pill text-white small me-2">
+                    <span class="pulse-online"></span>
+                    <span id="systemModeText">System: Online</span>
+                </div>
+                <a href="/swagger" target="_blank" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                    <i class="bi bi-code-square me-1"></i>Swagger API
+                </a>
+                <a href="http://localhost:15672" target="_blank" class="btn btn-sm btn-light rounded-pill px-3 fw-semibold">
+                    <i class="bi bi-diagram-3-fill text-warning me-1"></i>RabbitMQ UI
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container my-4 pb-5">
+
+        <!-- Stat Row -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-primary-subtle text-primary">
+                        <i class="bi bi-film"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-medium">Tổng Video</div>
+                        <h4 class="fw-bold mb-0" id="statTotalVideos">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-warning-subtle text-warning">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-medium">Jobs Chờ Xử Lý</div>
+                        <h4 class="fw-bold mb-0" id="statPendingJobs">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-info-subtle text-info">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-medium">Jobs Đang Chạy</div>
+                        <h4 class="fw-bold mb-0" id="statProcessingJobs">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-success-subtle text-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-medium">Jobs Hoàn Tất</div>
+                        <h4 class="fw-bold mb-0" id="statCompletedJobs">0</h4>
+                    </div>
                 </div>
             </div>
         </div>
-    </header>
 
-    <div class="container pb-5">
-        <!-- Architecture Diagram & Upload Section -->
+        <!-- Action / Upload & Architecture Card -->
         <div class="row g-4 mb-4">
             <!-- Upload Box -->
             <div class="col-lg-5">
-                <div class="card h-100">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
                     <div class="card-body p-4">
-                        <h5 class="card-title fw-bold mb-3"><i class="bi bi-cloud-arrow-up-fill text-primary me-2"></i>Đăng Ký / Tải Lên Video</h5>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <i class="bi bi-cloud-arrow-up text-primary fs-4"></i>
+                            <h5 class="fw-bold mb-0">Tải Lên / Đăng Ký Video</h5>
+                        </div>
+
                         <form id="uploadForm">
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Tiêu đề video</label>
-                                <input type="text" id="videoTitle" class="form-control" placeholder="Ví dụ: Demo Giới Thiệu Sản Phẩm" required>
+                                <label class="form-label small fw-semibold text-secondary">Tiêu đề video *</label>
+                                <input type="text" id="videoTitle" class="form-control rounded-3" placeholder="Nhập tên video (vd: Demo Bài Tập Lớn KTPM)" required>
                             </div>
+
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Tập tin video (MP4, MKV, MOV...)</label>
-                                <input type="file" id="videoFile" class="form-control" accept="video/*">
-                                <div class="form-text text-muted">Nếu không chọn file, hệ thống sẽ tự động tạo video mô phỏng để thử nghiệm.</div>
+                                <label class="form-label small fw-semibold text-secondary">Tập tin video (.mp4, .mkv, .webm)</label>
+                                <input type="file" id="videoFile" class="form-control rounded-3" accept="video/*">
+                                <div class="form-text small text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Nếu bạn không chọn file, hệ thống sẽ tự động tạo video mô phỏng chất lượng cao để test nhanh.
+                                </div>
                             </div>
-                            <button type="submit" id="btnUpload" class="btn btn-primary w-100 py-2 fw-semibold">
+
+                            <button type="submit" id="btnUpload" class="btn btn-gradient w-100 py-2 rounded-3 fw-semibold shadow-sm">
                                 <i class="bi bi-upload me-1"></i>Tải lên & Lưu trữ
                             </button>
                         </form>
@@ -115,103 +275,147 @@
 
             <!-- Architecture Flow Box -->
             <div class="col-lg-7">
-                <div class="card h-100 bg-white">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="card-title fw-bold mb-0"><i class="bi bi-diagram-3-fill text-info me-2"></i>Kiến Trúc Luồng Bất Đồng Bộ</h5>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                                <span class="pulse-dot me-1"></span> Hệ thống đang chạy
-                            </span>
+                <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                    <div class="card-body p-4 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                    <i class="bi bi-hdd-network text-info fs-4"></i>Luồng Xử Lý Bất Đồng Bộ
+                                </h5>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">
+                                    RabbitMQ Direct Exchange
+                                </span>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 text-center mb-3">
+                                <div class="d-flex justify-content-between align-items-center small fw-semibold flex-wrap gap-2">
+                                    <span class="badge bg-secondary px-3 py-2">1. Client / UI</span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span class="badge bg-primary px-3 py-2">2. Media API</span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span class="badge bg-warning text-dark px-3 py-2">3. RabbitMQ</span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span class="badge bg-success px-3 py-2">4. Media Worker</span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span class="badge bg-dark px-3 py-2">5. File Storage</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="bg-light p-3 rounded-3 text-center mb-3">
-                            <span class="badge bg-secondary">Client / Web UI</span>
-                            <i class="bi bi-arrow-right mx-2 text-muted"></i>
-                            <span class="badge bg-primary">Media API</span>
-                            <i class="bi bi-arrow-right mx-2 text-muted"></i>
-                            <span class="badge bg-warning text-dark">RabbitMQ Exchange</span>
-                            <i class="bi bi-arrow-right mx-2 text-muted"></i>
-                            <span class="badge bg-success">Media Worker</span>
-                            <i class="bi bi-arrow-right mx-2 text-muted"></i>
-                            <span class="badge bg-dark">File Storage</span>
-                        </div>
-                        <div class="row g-2 text-center small text-muted">
-                            <div class="col-4 border-end"><strong>Exchanges:</strong> video.exchange, video.exchange.dlq</div>
-                            <div class="col-4 border-end"><strong>Queues:</strong> video.jobs.queue, video.jobs.dlq</div>
-                            <div class="col-4"><strong>Tasks:</strong> Metadata, Thumbnail, Transcoding</div>
+
+                        <div class="row g-2 text-center small text-muted pt-2 border-top">
+                            <div class="col-4 border-end">
+                                <div class="fw-bold text-dark">Exchange & DLQ</div>
+                                <span style="font-size: 0.75rem;">video.exchange / dlq</span>
+                            </div>
+                            <div class="col-4 border-end">
+                                <div class="fw-bold text-dark">Idempotency</div>
+                                <span style="font-size: 0.75rem;">Chống xử lý trùng lặp</span>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-dark">Correlation ID</div>
+                                <span style="font-size: 0.75rem;">Truy vết luồng toàn diện</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Video List & Active Jobs -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold mb-0"><i class="bi bi-collection-play me-2"></i>Danh Sách Video & Tiến Trình Xử Lý</h4>
-            <button class="btn btn-outline-secondary btn-sm" onclick="fetchVideos()">
-                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
-            </button>
+        <!-- Filter & Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-collection-play-fill text-primary"></i>Danh Sách Video & Tiến Trình Xử Lý
+            </h4>
+            <div class="d-flex gap-2">
+                <input type="text" id="searchInput" class="form-control form-control-sm rounded-pill px-3" placeholder="Tìm theo tên video..." style="width: 220px;" oninput="filterVideos()">
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="fetchData()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+                </button>
+            </div>
         </div>
 
+        <!-- Video Cards Container -->
         <div id="videoContainer" class="row g-4">
             <div class="col-12 text-center py-5 text-muted">
                 <div class="spinner-border text-primary mb-2" role="status"></div>
-                <div>Đang tải danh sách video...</div>
+                <div>Đang tải dữ liệu...</div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Create Job -->
+    <!-- Modal: Video Player -->
+    <div class="modal fade" id="playerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 overflow-hidden shadow">
+                <div class="modal-header bg-dark text-white border-0 py-3">
+                    <h5 class="modal-title fw-bold" id="playerModalTitle">Xem Video</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0 bg-black text-center">
+                    <video id="videoElement" controls class="w-100" style="max-height: 500px; display: block;"></video>
+                </div>
+                <div class="modal-footer bg-dark border-0 py-2 justify-content-between text-white-50 small">
+                    <span id="playerInfoText">Media Stream</span>
+                    <a id="playerDownloadBtn" href="#" target="_blank" class="btn btn-sm btn-outline-light rounded-pill">
+                        <i class="bi bi-download me-1"></i>Tải về máy
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Create Single Job -->
     <div class="modal fade" id="jobModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold" id="jobModalTitle">Tạo Job Xử Lý Cho Video</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="selectedVideoId">
-                    <p class="text-muted">Chọn loại công việc cần giao cho Media Worker xử lý bất đồng bộ:</p>
-                    <div class="list-group">
-                        <label class="list-group-item list-group-item-action d-flex gap-3">
-                            <input class="form-check-input flex-shrink-0" type="radio" name="jobType" value="1" checked>
+                    <p class="text-muted small">Chọn loại tác vụ cần giao cho Media Worker xử lý bất đồng bộ:</p>
+                    <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+                        <label class="list-group-item list-group-item-action d-flex gap-3 py-3">
+                            <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="jobType" value="1" checked>
                             <div>
-                                <h6 class="mb-0 fw-bold">1. Trích xuất Metadata (ExtractMetadata)</h6>
-                                <p class="mb-0 text-muted small">Phân tích định dạng, độ phân giải, thời lượng và kích thước.</p>
+                                <div class="fw-bold">1. Trích xuất Metadata (ExtractMetadata)</div>
+                                <div class="text-muted small">Lấy thông số độ phân giải, thời lượng, codec, bitrate.</div>
                             </div>
                         </label>
-                        <label class="list-group-item list-group-item-action d-flex gap-3">
-                            <input class="form-check-input flex-shrink-0" type="radio" name="jobType" value="2">
+                        <label class="list-group-item list-group-item-action d-flex gap-3 py-3">
+                            <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="jobType" value="2">
                             <div>
-                                <h6 class="mb-0 fw-bold">2. Tạo ảnh đại diện (GenerateThumbnail)</h6>
-                                <p class="mb-0 text-muted small">Trích xuất frame tiêu biểu làm thumbnail đại diện cho video.</p>
+                                <div class="fw-bold">2. Tạo ảnh Thumbnail (GenerateThumbnail)</div>
+                                <div class="text-muted small">Trích xuất frame tiêu biểu tạo thumbnail chất lượng cao.</div>
                             </div>
                         </label>
-                        <label class="list-group-item list-group-item-action d-flex gap-3">
-                            <input class="form-check-input flex-shrink-0" type="radio" name="jobType" value="4">
+                        <label class="list-group-item list-group-item-action d-flex gap-3 py-3">
+                            <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="jobType" value="4">
                             <div>
-                                <h6 class="mb-0 fw-bold">3. Chuyển đổi chất lượng 720p (Transcode720p)</h6>
-                                <p class="mb-0 text-muted small">Mô phỏng/thực hiện nén và chuyển đổi độ phân giải chuẩn HD 720p.</p>
+                                <div class="fw-bold">3. Chuyển đổi chuẩn HD 720p (Transcode720p)</div>
+                                <div class="text-muted small">Tối ưu và nén video sang định dạng HD 720p.</div>
                             </div>
                         </label>
-                        <label class="list-group-item list-group-item-action d-flex gap-3">
-                            <input class="form-check-input flex-shrink-0" type="radio" name="jobType" value="3">
+                        <label class="list-group-item list-group-item-action d-flex gap-3 py-3">
+                            <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="jobType" value="3">
                             <div>
-                                <h6 class="mb-0 fw-bold">4. Chuyển đổi chất lượng 480p (Transcode480p)</h6>
-                                <p class="mb-0 text-muted small">Tối ưu dung lượng cho mạng tốc độ chậm.</p>
+                                <div class="fw-bold">4. Chuyển đổi chuẩn 480p (Transcode480p)</div>
+                                <div class="text-muted small">Dung lượng nhẹ cho thiết bị di động.</div>
                             </div>
                         </label>
-                        <label class="list-group-item list-group-item-action d-flex gap-3">
-                            <input class="form-check-input flex-shrink-0" type="radio" name="jobType" value="5">
+                        <label class="list-group-item list-group-item-action d-flex gap-3 py-3">
+                            <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="jobType" value="5">
                             <div>
-                                <h6 class="mb-0 fw-bold">5. Chuyển đổi chất lượng Full HD 1080p (Transcode1080p)</h6>
-                                <p class="mb-0 text-muted small">Chuyển đổi chất lượng cao Full HD.</p>
+                                <div class="fw-bold">5. Chuyển đổi chuẩn Full HD 1080p (Transcode1080p)</div>
+                                <div class="text-muted small">Chất lượng cao nhất Full HD.</div>
                             </div>
                         </label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-primary" onclick="submitCreateJob()">
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold" onclick="submitCreateJob()">
                         <i class="bi bi-send-fill me-1"></i>Đưa vào Queue
                     </button>
                 </div>
@@ -219,19 +423,66 @@
         </div>
     </div>
 
+    <!-- Modal: Job Details Raw JSON -->
+    <div class="modal fade" id="detailsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="detailsModalTitle">Chi Tiết Kết Quả Job</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <pre id="detailsJsonContent" class="bg-light p-3 rounded-3 small text-dark border overflow-auto" style="max-height: 350px;"></pre>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const jobModal = new bootstrap.Modal(document.getElementById('jobModal'));
+        const playerModal = new bootstrap.Modal(document.getElementById('playerModal'));
+        const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
 
-        // Load Videos
-        async function fetchVideos() {
+        let cachedVideos = [];
+
+        // Fetch All Data
+        async function fetchData() {
             try {
+                // Fetch stats
+                const statsRes = await fetch('/stats');
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('statTotalVideos').innerText = stats.totalVideos;
+                    document.getElementById('statPendingJobs').innerText = stats.pendingJobs;
+                    document.getElementById('statProcessingJobs').innerText = stats.processingJobs;
+                    document.getElementById('statCompletedJobs').innerText = stats.completedJobs;
+                    document.getElementById('systemModeText').innerText = `Broker: ${stats.brokerMode}`;
+                }
+
+                // Fetch videos
                 const res = await fetch('/videos');
-                const videos = await res.json();
-                renderVideos(videos);
+                if (res.ok) {
+                    cachedVideos = await res.json();
+                    renderVideos(cachedVideos);
+                }
             } catch (err) {
-                console.error("Lỗi tải video:", err);
+                console.error("Lỗi tải dữ liệu:", err);
             }
+        }
+
+        function filterVideos() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (!query) {
+                renderVideos(cachedVideos);
+                return;
+            }
+            const filtered = cachedVideos.filter(v => v.title.toLowerCase().includes(query) || v.fileName.toLowerCase().includes(query));
+            renderVideos(filtered);
         }
 
         function renderVideos(videos) {
@@ -239,69 +490,104 @@
             if (!videos || videos.length === 0) {
                 container.innerHTML = `
                     <div class="col-12 text-center py-5 text-muted">
-                        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                        <i class="bi bi-inbox display-4 d-block mb-3 text-secondary"></i>
                         <h5>Chưa có video nào</h5>
-                        <p>Hãy tải lên video đầu tiên bằng biểu mẫu bên trên.</p>
+                        <p class="small">Hãy tải lên hoặc tạo video mô phỏng đầu tiên bằng biểu mẫu bên trên.</p>
                     </div>`;
                 return;
             }
 
             container.innerHTML = videos.map(v => {
-                const thumb = v.thumbnailUrl || 'https://placehold.co/400x225/1e293b/ffffff?text=No+Thumbnail';
+                const thumb = v.thumbnailUrl || 'https://placehold.co/640x360/0f172a/ffffff?text=Video+Thumbnail';
+                
+                // Status badge
+                let statusBadge = `<span class="badge badge-soft-primary px-3 py-1 rounded-pill">${v.status}</span>`;
+                if (v.status === 'Ready') statusBadge = `<span class="badge badge-soft-success px-3 py-1 rounded-pill"><i class="bi bi-check2 me-1"></i>Sẵn sàng</span>`;
+                else if (v.status === 'Processing') statusBadge = `<span class="badge badge-soft-warning px-3 py-1 rounded-pill"><i class="bi bi-arrow-repeat me-1"></i>Đang xử lý</span>`;
+
+                // Jobs list
                 const jobsHtml = v.jobs.length === 0 
-                    ? '<p class="text-muted small mb-0">Chưa có job xử lý nào.</p>'
+                    ? '<div class="text-muted small py-3 text-center bg-light rounded-3">Chưa có job xử lý nào. Hãy bấm "Xử Lý Toàn Diện" hoặc "Tạo Job".</div>'
                     : v.jobs.map(j => {
-                        let statusColor = 'secondary';
+                        let statusBadge = `<span class="badge badge-soft-primary">${j.status}</span>`;
+                        let barClass = 'bg-primary';
                         let progAnim = '';
-                        if (j.status === 'Completed') statusColor = 'success';
-                        else if (j.status === 'Processing') { statusColor = 'primary'; progAnim = 'progress-bar-striped progress-bar-animated'; }
-                        else if (j.status === 'Failed') statusColor = 'danger';
+
+                        if (j.status === 'Completed') {
+                            statusBadge = `<span class="badge badge-soft-success">Hoàn tất</span>`;
+                            barClass = 'bg-success';
+                        } else if (j.status === 'Processing') {
+                            statusBadge = `<span class="badge badge-soft-warning">Đang chạy</span>`;
+                            barClass = 'bg-primary';
+                            progAnim = 'progress-bar-striped progress-bar-animated';
+                        } else if (j.status === 'Failed') {
+                            statusBadge = `<span class="badge badge-soft-danger">Thất bại</span>`;
+                            barClass = 'bg-danger';
+                        }
 
                         return `
-                            <div class="border rounded p-2 mb-2 bg-light small">
+                            <div class="border rounded-3 p-2 mb-2 bg-light small">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong><i class="bi bi-gear-wide-connected me-1"></i>${j.jobType}</strong>
-                                    <span class="badge bg-${statusColor}">${j.status}</span>
+                                    <span class="fw-bold text-dark"><i class="bi bi-gear-fill text-secondary me-1"></i>${j.jobType}</span>
+                                    ${statusBadge}
                                 </div>
                                 <div class="progress progress-thin mb-1">
-                                    <div class="progress-bar bg-${statusColor} ${progAnim}" style="width: ${j.progress}%"></div>
+                                    <div class="progress-bar ${barClass} ${progAnim}" style="width: ${j.progress}%"></div>
                                 </div>
-                                <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
-                                    <span>Tiến trình: ${j.progress}%</span>
-                                    <span>${j.completedAt ? new Date(j.completedAt).toLocaleTimeString() : ''}</span>
+                                <div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;">
+                                    <span>Tiến trình: <strong>${j.progress}%</strong></span>
+                                    ${j.resultData ? `<a href="javascript:void(0)" class="text-primary text-decoration-none fw-semibold" onclick="viewJobResult('${j.id}')">Xem kết quả</a>` : ''}
                                 </div>
-                                ${j.resultData ? `<div class="mt-1 text-truncate text-secondary" style="font-size: 0.75rem;"><code>${j.resultData}</code></div>` : ''}
-                                ${j.errorMessage ? `<div class="mt-1 text-danger" style="font-size: 0.75rem;">Lỗi: ${j.errorMessage}</div>` : ''}
+                                ${j.errorMessage ? `<div class="mt-1 text-danger small">Lỗi: ${j.errorMessage}</div>` : ''}
                             </div>
                         `;
                     }).join('');
 
                 return `
                     <div class="col-md-6 col-lg-4">
-                        <div class="card h-100">
-                            <img src="${thumb}" class="thumbnail-img" alt="Thumbnail">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title fw-bold text-truncate mb-0" title="${v.title}">${v.title}</h5>
-                                    <span class="badge bg-info-subtle text-info border border-info-subtle badge-status">${v.status}</span>
+                        <div class="video-card h-100 d-flex flex-column">
+                            <div class="thumb-wrapper">
+                                <img src="${thumb}" class="thumb-img" alt="${v.title}">
+                                <div class="play-overlay" onclick="openPlayer('${v.title}', '${v.downloadUrl || ''}')">
+                                    <div class="btn-play-circle">
+                                        <i class="bi bi-play-fill" style="margin-left: 2px;"></i>
+                                    </div>
                                 </div>
-                                <p class="card-text text-muted small mb-3">
-                                    <i class="bi bi-file-earmark-play me-1"></i>${v.fileName}<br>
-                                    <i class="bi bi-hdd me-1"></i>${(v.fileSize / (1024*1024)).toFixed(2)} MB 
-                                    ${v.resolution ? ` | <i class="bi bi-aspect-ratio me-1"></i>${v.resolution}` : ''}
-                                    ${v.durationSeconds ? ` | <i class="bi bi-clock me-1"></i>${v.durationSeconds}s` : ''}
-                                </p>
-                                
-                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Danh sách Jobs:</h6>
+                                <div class="position-absolute bottom-0 start-0 p-2 text-white small" style="background: linear-gradient(transparent, rgba(0,0,0,0.8)); width: 100%;">
+                                    <span class="badge bg-dark bg-opacity-75">${v.resolution || 'Đang cập nhật'}</span>
+                                    ${v.durationSeconds ? `<span class="badge bg-dark bg-opacity-75 ms-1">${v.durationSeconds}s</span>` : ''}
+                                </div>
+                            </div>
+
+                            <div class="p-3 d-flex flex-column flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                    <h6 class="fw-bold mb-0 text-truncate text-dark" title="${v.title}">${v.title}</h6>
+                                    ${statusBadge}
+                                </div>
+
+                                <div class="text-muted small mb-3">
+                                    <i class="bi bi-file-earmark-play me-1"></i>${v.fileName} 
+                                    <span class="mx-1">•</span>
+                                    <i class="bi bi-hdd me-1"></i>${(v.fileSize / (1024*1024)).toFixed(2)} MB
+                                </div>
+
+                                <div class="small fw-bold text-uppercase text-secondary mb-2" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                                    Danh sách công việc (${v.jobs.length}):
+                                </div>
                                 <div class="flex-grow-1 overflow-auto mb-3" style="max-height: 180px;">
                                     ${jobsHtml}
                                 </div>
 
-                                <div class="d-flex gap-2 mt-auto">
-                                    <button class="btn btn-outline-primary btn-sm flex-fill" onclick="openJobModal('${v.id}', '${v.title}')">
-                                        <i class="bi bi-plus-circle me-1"></i>Tạo Job
+                                <div class="pt-2 border-top d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-primary btn-sm rounded-pill flex-fill fw-semibold" onclick="processAllJobs('${v.id}')" title="Chạy Metadata, Thumbnail và 720p">
+                                        <i class="bi bi-lightning-fill me-1"></i>Xử Lý Full
                                     </button>
-                                    ${v.downloadUrl ? `<a href="${v.downloadUrl}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i></a>` : ''}
+                                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="openJobModal('${v.id}', '${v.title}')" title="Tùy chọn Job riêng">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill px-2" onclick="deleteVideo('${v.id}', '${v.title}')" title="Xóa video">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -310,12 +596,12 @@
             }).join('');
         }
 
-        // Form Upload
+        // Upload Form
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnUpload');
             btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang tải...`;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang tải lên...`;
 
             const title = document.getElementById('videoTitle').value;
             const fileInput = document.getElementById('videoFile');
@@ -336,14 +622,43 @@
 
                 document.getElementById('videoTitle').value = '';
                 fileInput.value = '';
-                await fetchVideos();
+                await fetchData();
             } catch (err) {
-                alert('Lỗi khi tải lên video: ' + err.message);
+                alert('Lỗi tải video: ' + err.message);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i class="bi bi-upload me-1"></i>Tải lên & Lưu trữ`;
             }
         });
+
+        // Batch Process All Jobs
+        async function processAllJobs(videoId) {
+            try {
+                const res = await fetch(`/videos/${videoId}/process-all`, { method: 'POST' });
+                if (res.ok) {
+                    await fetchData();
+                } else {
+                    alert('Lỗi kích hoạt tiến trình xử lý.');
+                }
+            } catch (err) {
+                alert('Lỗi kết nối: ' + err.message);
+            }
+        }
+
+        // Delete Video
+        async function deleteVideo(videoId, title) {
+            if (!confirm(`Bạn có chắc muốn xóa video "${title}" không?`)) return;
+            try {
+                const res = await fetch(`/videos/${videoId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    await fetchData();
+                } else {
+                    alert('Lỗi khi xóa video.');
+                }
+            } catch (err) {
+                alert('Lỗi kết nối: ' + err.message);
+            }
+        }
 
         function openJobModal(videoId, title) {
             document.getElementById('selectedVideoId').value = videoId;
@@ -364,7 +679,7 @@
 
                 if (res.ok) {
                     jobModal.hide();
-                    await fetchVideos();
+                    await fetchData();
                 } else {
                     const data = await res.json();
                     alert("Lỗi tạo job: " + (data.error || 'Thao tác không thành công'));
@@ -374,9 +689,48 @@
             }
         }
 
-        // Auto Poll every 3 seconds for live job progress
-        setInterval(fetchVideos, 3000);
-        fetchVideos();
+        // View Raw Job Result
+        async function viewJobResult(jobId) {
+            try {
+                const res = await fetch(`/jobs/${jobId}`);
+                if (res.ok) {
+                    const job = await res.json();
+                    document.getElementById('detailsModalTitle').innerText = `Kết Quả: ${job.jobType} (${job.status})`;
+                    let parsed = job.resultData;
+                    try { parsed = JSON.parse(job.resultData); } catch {}
+                    document.getElementById('detailsJsonContent').innerText = JSON.stringify(parsed, null, 2);
+                    detailsModal.show();
+                }
+            } catch (err) {
+                alert('Lỗi: ' + err.message);
+            }
+        }
+
+        // Open Video Player
+        function openPlayer(title, url) {
+            if (!url) {
+                alert("Video này chưa có file stream hợp lệ.");
+                return;
+            }
+            document.getElementById('playerModalTitle').innerText = title;
+            document.getElementById('playerInfoText').innerText = `Source: ${url}`;
+            document.getElementById('playerDownloadBtn').href = url;
+            const videoEl = document.getElementById('videoElement');
+            videoEl.src = url;
+            videoEl.load();
+            playerModal.show();
+        }
+
+        // Clean video stream when closing modal
+        document.getElementById('playerModal').addEventListener('hidden.bs.modal', () => {
+            const videoEl = document.getElementById('videoElement');
+            videoEl.pause();
+            videoEl.src = '';
+        });
+
+        // Polling every 2.5 seconds
+        setInterval(fetchData, 2500);
+        fetchData();
     </script>
 </body>
 </html>
